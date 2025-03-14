@@ -18,22 +18,22 @@ check_memory() {
 # Function to print status with explanation if "explain" argument is passed
 print_status() {
     if [ "$1" == "cpu" ]; then
-        if [ "$(echo "$cpu_usage < 50" | bc)" -eq 1 ]; then
-            echo "Unhealthy: CPU utilization is less than 50%. Need to increase CPU capacity."
+        if [ "$(echo "$cpu_usage > 50" | bc)" -eq 1 ]; then
+            echo "Unhealthy: CPU utilization is greater than 50%. Need to increase CPU capacity."
         else
-            echo "Healthy: CPU utilization is above 50%. Adequate CPU capacity."
+            echo "Healthy: CPU utilization is less than 50%. Adequate CPU capacity."
         fi
     elif [ "$1" == "disk" ]; then
-        if [ "$disk_usage" -lt 50 ]; then
-            echo "Unhealthy: Disk space utilization is less than 50%. Need to increase disk space."
+        if [ "$disk_usage" -gt 50 ]; then
+            echo "Unhealthy: Disk space utilization is greater than 50%. Need to increase disk space."
         else
-            echo "Healthy: Disk space utilization is above 50%. Adequate disk space."
+            echo "Healthy: Disk space utilization is less than 50%. Adequate disk space."
         fi
     elif [ "$1" == "memory" ]; then
-        if [ "$(echo "$mem_usage < 50" | bc)" -eq 1 ]; then
-            echo "Unhealthy: Memory utilization is less than 50%. Need to increase memory."
+        if [ "$(echo "$mem_usage > 50" | bc)" -eq 1 ]; then
+            echo "Unhealthy: Memory utilization is greater than 50%. Need to increase memory."
         else
-            echo "Healthy: Memory utilization is above 50%. Adequate memory."
+            echo "Healthy: Memory utilization is less than 50%. Adequate memory."
         fi
     fi
 }
@@ -41,11 +41,11 @@ print_status() {
 # Function to explain health status if the "explain" argument is passed
 explain_status() {
     if [ "$1" == "cpu" ]; then
-        echo "Explanation: CPU utilization is calculated by checking the idle CPU percentage and subtracting it from 100%. If the usage is less than 50%, the CPU is considered underutilized, suggesting a need for increased capacity."
+        echo "Explanation: CPU utilization is calculated by checking the idle CPU percentage and subtracting it from 100%. If the usage is greater than 50%, the CPU is considered underutilized, suggesting a need for increased capacity."
     elif [ "$1" == "disk" ]; then
-        echo "Explanation: Disk space utilization is calculated by checking the disk usage percentage. If it is under 50%, the disk is considered to have adequate space."
+        echo "Explanation: Disk space utilization is calculated by checking the disk usage percentage. If it is above 50%, the disk is considered to be nearing full capacity."
     elif [ "$1" == "memory" ]; then
-        echo "Explanation: Memory utilization is calculated by checking the used memory percentage. If it is under 50%, the system has sufficient memory, but if it exceeds 50%, the memory is under pressure."
+        echo "Explanation: Memory utilization is calculated by checking the used memory percentage. If it is greater than 50%, the system is under memory pressure, and additional memory is required."
     fi
 }
 
