@@ -1,57 +1,77 @@
-const os = require('os');
-const fs = require('fs');
+#!/bin/bash
 
-function getHealthStatus() {
-  // CPU Usage (based on load average)
-  const cpuCount = os.cpus().length;
-  const loadAvg = os.loadavg()[0]; // 1 minute load average
-  const cpuUsagePercent = (loadAvg / cpuCount) * 100;
-
-  // Memory Usage
-  const totalMemory = os.totalmem();
-  const freeMemory = os.freemem();
-  const memoryUsagePercent = ((totalMemory - freeMemory) / totalMemory) * 100;
-
-  // Disk Space (for current directory)
-  const diskInfo = fs.statfsSync('.');
-  const totalSpace = diskInfo.blocks * diskInfo.bsize;
-  const freeSpace = diskInfo.bfree * diskInfo.bsize;
-  const diskUsagePercent = ((totalSpace - freeSpace) / totalSpace) * 100;
-
-  return {
-    cpu: {
-      usage: cpuUsagePercent,
-      healthy: cpuUsagePercent > 50,
-      details: `CPU Usage: ${cpuUsagePercent.toFixed(2)}% (Load Average: ${loadAvg.toFixed(2)} across ${cpuCount} CPUs)`
-    },
-    memory: {
-      usage: memoryUsagePercent,
-      healthy: memoryUsagePercent > 50,
-      details: `Memory Usage: ${memoryUsagePercent.toFixed(2)}% (${((totalMemory - freeMemory) / 1024 / 1024 / 1024).toFixed(2)}GB used out of ${(totalMemory / 1024 / 1024 / 1024).toFixed(2)}GB)`
-    },
-    disk: {
-      usage: diskUsagePercent,
-      healthy: diskUsagePercent > 50,
-      details: `Disk Usage: ${diskUsagePercent.toFixed(2)}% (${((totalSpace - freeSpace) / 1024 / 1024 / 1024).toFixed(2)}GB used out of ${(totalSpace / 1024 / 1024 / 1024).toFixed(2)}GB)`
-    }
-  };
+# Function to check CPU utilization
+check_cpu() {
+    cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
 }
 
-function main() {
-  const explain = process.argv.includes('explain');
-  const health = getHealthStatus();
-  
-  const resources = ['cpu', 'memory', 'disk'];
-  
-  resources.forEach(resource => {
-    const status = health[resource];
-    console.log(`\n${resource.toUpperCase()} Status:`);
-    console.log(status.healthy ? '✅ Healthy with adequate space' : '❌ Unhealthy, need to increase the space');
-    
-    if (explain) {
-      console.log(status.details);
-    }
-  });
+# Function to check disk space usage
+check_disk() {
+    disk_usage=$(df / | grep / | awk '{ print $5 }' | sed 's/%//g')
 }
 
-main();
+# Function to check memory utilization
+check_memory() {
+    mem_usage=$(free | grep Mem | awk '{print $3/$2 * 100.0}')
+}
+
+# Function to print status with explanation if "explain" argument is passed
+print_status() {
+    if [ "$1" == "cpu" ]; then
+        if [ "$(echo "$cpu_usage < 50" | bc)" -eq 1 ]; then
+            echo "Unhealthy: CPU utilization is less than 50%. Need to increase CPU capacity."
+        else
+            echo "Healthy: CPU utilization is above 50%. Adequate CPU capacity."
+        fi
+    elif [ "$1" == "disk" ]; then
+        if [ "$disk_usage" -lt 50 ]; then
+            echo "Unhealthy: Disk space utilization is less than 50%. Need to increase disk space."
+        else
+            echo "Healthy: Disk space utilization is above 50%. Adequate disk space."
+        fi
+    elif [ "$1" == "memory" ]; then
+        if [ "$(echo "$mem_usage < 50" | bc)" -eq 1 ]; then
+            echo "Unhealthy: Memory utilization is less than 50%. Need to increase memory."
+        else
+            echo "Healthy: Memory utilization is above 50%. Adequate memory."
+        fi
+    fi
+}
+
+# Function to explain health status if the "explain" argument is passed
+explain_status() {
+    if [ "$1" == "cpu" ]; then
+        echo "Explanation: CPU utilization is calculated by checking the idle CPU percentage and subtracting it from 100%. If the usage is less than 50%, the CPU is considered underutilized, suggesting a need for increased capacity."
+    elif [ "$1" == "disk" ]; then
+        echo "Explanation: Disk space utilization is calculated by checking the disk usage percentage. If it is under 50%, the disk is considered to have adequate space."
+    elif [ "$1" == "memory" ]; then
+        echo "Explanation: Memory utilization is calculated by checking the used memory percentage. If it is under 50%, the system has sufficient memory, but if it exceeds 50%, the memory is under pressure."
+    fi
+}
+
+# Main Script Execution
+if [ "$1" == "explain" ]; then
+    explain=true
+    shift # remove "explain" from command-line arguments
+else
+    explain=false
+fi
+
+# Check CPU, Disk, and Memory
+check_cpu
+check_disk
+check_memory
+
+# Output Health Status for each resource
+if [ "$explain" == true ]; then
+    print_status "cpu"
+    explain_status "cpu"
+    print_status "disk"
+    explain_status "disk"
+    print_status "memory"
+    explain_status "memory"
+else
+    print_status "cpu"
+    print_status "disk"
+    print_status "memory"
+fi
